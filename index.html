@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>财小伴——大学生的理财搭子</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-container app-container--loading" id="appContainer">
+
+  <!-- ========== Splash Screen ========== -->
+  <div class="splash" id="splashScreen">
+    <div class="splash__bg"></div>
+    <div class="splash__content">
+      <div class="splash__logo">🐣</div>
+      <div class="splash__slogan">校园轻理财，省心有小伴</div>
+      <div class="splash__name">财小伴</div>
+      <div class="splash__subtitle">—— 大学生的理财搭子 ——</div>
+    </div>
+  </div>
+
+  <!-- ========== Tutorial Overlay ========== -->
+  <div class="tutorial" id="tutorialOverlay">
+    <div class="tutorial__card" id="tutorialCard">
+      <div class="tutorial__card-text" id="tutorialCardText"></div>
+    </div>
+    <div class="tutorial__dots" id="tutorialDots"></div>
+    <div class="tutorial__hint">轻点屏幕继续</div>
+  </div>
+
+  <!-- ========== Persona Selection Overlay ========== -->
+  <div class="persona-select" id="personaSelectOverlay">
+    <div class="persona-select__bg"></div>
+    <div class="persona-select__content">
+      <div class="persona-select__title">✨ 选择你的AI搭子 ✨</div>
+      <div class="persona-select__cards">
+        <div class="persona-card" data-persona="cool-guy">
+          <img class="persona-card__avatar" src="images/avatar-guyunsheng.png" alt="顾云生">
+          <div class="persona-card__name">顾云生</div>
+          <div class="persona-card__desc">高冷男神</div>
+        </div>
+        <div class="persona-card" data-persona="sweet-girl">
+          <img class="persona-card__avatar" src="images/avatar-linkeke.png" alt="林可可">
+          <div class="persona-card__name">林可可</div>
+          <div class="persona-card__desc">可爱甜妹</div>
+        </div>
+      </div>
+      <div class="persona-select__hint">后续可在【我的】进行AI人设修改和自定义</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ========== Bookkeeping Page ========== -->
+  <div class="page page--active" id="pageBookkeeping">
+    <div class="page-header">
+      <span class="page-header__title">财小伴</span>
+      <span class="page-header__right">
+        <button class="header-cal-btn" id="btnOpenCalendar">📅</button>
+        <span class="page-header__date" id="headerDate"></span>
+      </span>
+    </div>
+
+    <div class="month-selector">
+      <button class="month-selector__arrow" id="btnPrevMonth">◀</button>
+      <span class="month-selector__label" id="monthLabel">2026年5月</span>
+      <button class="month-selector__arrow" id="btnNextMonth">▶</button>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-card__label">本月支出</div>
+        <div class="summary-card__amount summary-card__amount--expense" id="sumExpense">¥0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card__label">本月收入</div>
+        <div class="summary-card__amount summary-card__amount--income" id="sumIncome">¥0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card__label">本月结余</div>
+        <div class="summary-card__amount summary-card__amount--balance" id="sumBalance">¥0</div>
+      </div>
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card__header">
+        <span class="budget-card__title">📊 本月预算</span>
+        <span class="budget-card__edit" id="btnEditBudget">修改</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-bar__fill progress-bar__fill--safe" id="budgetFill"></div>
+      </div>
+      <div class="budget-card__stats">
+        <span id="budgetUsed">已用 ¥0</span>
+        <span id="budgetRemain">剩余 ¥0</span>
+      </div>
+    </div>
+
+    <div class="today-week-row">
+      <div class="today-week-card">
+        <div class="today-week-card__header">
+          <span>今天</span>
+          <span class="today-week-card__date" id="todayDate">5/16</span>
+        </div>
+        <div class="today-week-card__nums">
+          <span>收入 <b style="color:var(--color-income)" id="todayIncome">¥0</b></span>
+          <span>支出 <b style="color:var(--color-expense)" id="todayExpense">¥0</b></span>
+        </div>
+      </div>
+      <div class="today-week-card">
+        <div class="today-week-card__header">
+          <span>本周</span>
+          <span class="today-week-card__date" id="weekDate">5/11-5/16</span>
+        </div>
+        <div class="today-week-card__nums">
+          <span>收入 <b style="color:var(--color-income)" id="weekIncome">¥0</b></span>
+          <span>支出 <b style="color:var(--color-expense)" id="weekExpense">¥0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="savings-card">
+      <div class="savings-card__header">
+        <span class="savings-card__title">🎯 攒钱目标</span>
+        <span class="savings-card__edit" id="btnEditSavings">设置</span>
+      </div>
+      <div id="savingsGoalsContainer"></div>
+    </div>
+
+    <div class="bill-section">
+      <div class="bill-section__title">近期账单</div>
+      <div class="bill-list" id="billListContainer"></div>
+    </div>
+  </div>
+
+  <!-- ========== Finance Page ========== -->
+  <div class="page" id="pageFinance">
+    <div class="page-header">
+      <span class="page-header__title">理财陪伴</span>
+    </div>
+    <div class="page-body">
+
+      <div class="finance-assets">
+        <div class="finance-assets__label">💡 我的闲钱资产</div>
+        <div class="finance-assets__amount" id="financeAssetsAmount">¥0</div>
+        <div class="finance-assets__sub">预计投入理财资金 + 累计收支结余</div>
+      </div>
+
+      <div class="finance-invest-row">
+        <span class="finance-invest-row__label">预计投入理财资金</span>
+        <input class="input-field" id="investInput" type="number" placeholder="输入金额">
+        <button class="btn btn--primary btn--sm" id="btnUpdateInvest">确认</button>
+      </div>
+
+      <div class="finance-grid">
+        <div class="finance-card" data-type="knowledge">
+          <span class="finance-card__icon">📖</span>
+          <span class="finance-card__title">理财知识科普</span>
+          <span class="finance-card__desc">从零开始学理财</span>
+        </div>
+        <div class="finance-card" data-type="risk">
+          <span class="finance-card__icon">🧪</span>
+          <span class="finance-card__title">风险认知测试</span>
+          <span class="finance-card__desc">了解你的风险偏好</span>
+        </div>
+        <div class="finance-card" data-type="allocation">
+          <span class="finance-card__icon">📘</span>
+          <span class="finance-card__title">低风险理财讲解</span>
+          <span class="finance-card__desc">适合学生的稳健方式</span>
+        </div>
+        <div class="finance-card" data-type="antifraud">
+          <span class="finance-card__icon">🛡️</span>
+          <span class="finance-card__title">防骗反诈科普</span>
+          <span class="finance-card__desc">校园理财安全指南</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== Statistics Page ========== -->
+  <div class="page" id="pageStatistics">
+    <div class="page-header">
+      <span class="page-header__title">统计分析</span>
+    </div>
+    <div class="page-body" id="statsBody">
+      <div class="stats-summary" id="statsSummary"></div>
+
+      <div class="stats-card">
+        <div class="stats-card__title">📈 收支趋势</div>
+        <div class="stats-range-row">
+          <select id="trendYearStart" class="stats-range__select"></select>
+          <select id="trendMonthStart" class="stats-range__select"></select>
+          <span style="font-size:11px;color:var(--color-text-light)">→</span>
+          <select id="trendYearEnd" class="stats-range__select"></select>
+          <select id="trendMonthEnd" class="stats-range__select"></select>
+        </div>
+        <div class="stats-card__chart"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <div class="stats-card">
+        <div class="stats-card__title">
+          <span>🍩 消费分类占比</span>
+          <div class="stats-toggle">
+            <span class="stats-toggle__btn stats-toggle__btn--active" id="btnPieMonth" onclick="togglePieMode('month')">本月</span>
+            <span class="stats-toggle__btn" id="btnPieYear" onclick="togglePieMode('year')">本年</span>
+          </div>
+        </div>
+        <div class="stats-card__chart"><canvas id="categoryPie"></canvas></div>
+      </div>
+
+      <div class="stats-card" id="insightCard">
+        <div class="stats-card__title">
+          <span>📝 消费小结</span>
+          <div class="stats-toggle">
+            <span class="stats-toggle__btn stats-toggle__btn--active" id="btnInsMonth" onclick="toggleInsightMode('month')">本月</span>
+            <span class="stats-toggle__btn" id="btnInsYear" onclick="toggleInsightMode('year')">本年</span>
+          </div>
+        </div>
+        <div class="stats-card__text" id="monthlyInsight"></div>
+      </div>
+
+      <div class="stats-card">
+        <div class="stats-card__title">🎯 攒钱进度</div>
+        <div class="stats-card__text" id="savingsProgressStats"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Profile Page ========== -->
+  <div class="page" id="pageProfile">
+    <div class="page-header">
+      <span class="page-header__title">我的</span>
+    </div>
+    <div class="page-body">
+
+      <div class="profile-avatar">
+        <div class="profile-avatar__icon">🐣</div>
+        <div class="profile-avatar__name" id="profileNickname">同学</div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block__title">个人设置</div>
+        <div class="settings-list">
+          <div class="settings-item" id="btnEditNickname">
+            <span class="settings-item__label">昵称</span>
+            <span class="settings-item__value">
+              <span id="settingNickname">同学</span>
+              <span class="settings-item__arrow">›</span>
+            </span>
+          </div>
+          <div class="settings-item" id="btnPickPersona">
+            <span class="settings-item__label">AI搭子人设</span>
+            <span class="settings-item__value">
+              <span id="settingPersona">顾云生 · 高冷男神</span>
+              <span class="settings-item__arrow">›</span>
+            </span>
+          </div>
+          <div class="settings-item" id="btnCustomPersona">
+            <span class="settings-item__label">✏️ 自定义AI搭子</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block__title">数据管理</div>
+        <div class="settings-list">
+          <div class="settings-item" id="btnExportData">
+            <span class="settings-item__label">📤 导出数据</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+          <div class="settings-item" id="btnImportData">
+            <span class="settings-item__label">📥 导入数据</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+          <div class="settings-item settings-item--danger" id="btnClearData">
+            <span class="settings-item__label">🗑️ 清空本地数据</span>
+            <span class="settings-item__arrow settings-item__arrow--danger">›</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-block__title">其他</div>
+        <div class="settings-list">
+          <div class="settings-item" id="btnShowHelp">
+            <span class="settings-item__label">📋 使用说明</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+          <div class="settings-item" id="btnShowAbout">
+            <span class="settings-item__label">ℹ️ 关于我们</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+          <div class="settings-item" id="btnLoadTestData">
+            <span class="settings-item__label">🧪 加载测试数据</span>
+            <span class="settings-item__arrow">›</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========== AI Chat Overlay (from + button) ========== -->
+  <div class="chat-overlay" id="aiChatOverlay">
+    <div class="chat-overlay__header">
+      <span class="chat-overlay__spacer"></span>
+      <span class="chat-overlay__title" id="chatOverlayTitle">顾云生</span>
+      <button class="chat-overlay__close" id="btnCloseAiChat">✕</button>
+    </div>
+
+    <div class="chat-overlay__messages" id="aiChatMessages">
+      <div class="chat-msg" id="aiChatWelcomeMsg">
+        <img class="chat-msg__avatar" id="aiChatAvatar" src="images/avatar-guyunsheng.png" alt="">
+        <div class="chat-msg__bubble">
+          <div class="chat-bubble chat-bubble--ai">
+            来了。需要什么？
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-overlay__actions">
+      <button class="btn btn--secondary" id="btnOpenManualBill">手动记账</button>
+      <button class="btn btn--secondary" id="btnAiAnalysis">本月消费分析</button>
+      <button class="btn btn--secondary" id="btnAiAdvice">理财建议</button>
+    </div>
+
+    <div class="chat-overlay__input-row">
+      <input class="input-field input-field--rounded" id="aiChatInput" placeholder="描述收支或输入问题...">
+      <button class="btn btn--icon btn--primary btn--circle" id="btnSendAiMsg">➤</button>
+    </div>
+  </div>
+
+  <!-- ========== Manual Bill Panel (bottom sheet) ========== -->
+  <div class="manual-panel" id="manualBillPanel">
+    <div class="manual-panel__header">
+      <button class="manual-panel__cancel" id="btnCancelManual">取消</button>
+      <span class="manual-panel__title">手动记账</span>
+      <span class="manual-panel__spacer"></span>
+    </div>
+
+    <div class="manual-panel__toggle">
+      <button class="manual-panel__type-btn manual-panel__type-btn--expense manual-panel__type-btn--active" id="btnTypeExpense">支出</button>
+      <button class="manual-panel__type-btn manual-panel__type-btn--income" id="btnTypeIncome">收入</button>
+    </div>
+
+    <div class="manual-panel__categories" id="manualCategories"></div>
+
+    <div class="manual-panel__amount" id="manualAmountDisplay">0</div>
+
+    <div class="manual-panel__numpad" id="manualNumpad"></div>
+
+    <div class="manual-panel__note-row">
+      <input class="input-field" id="manualNote" placeholder="添加备注..." maxlength="30">
+      <input class="input-field manual-panel__date" type="date" id="manualDate">
+    </div>
+
+    <div class="manual-panel__confirm-row">
+      <button class="btn btn--primary btn--block btn--lg" id="btnSaveManual">✓ 确认记账</button>
+    </div>
+  </div>
+
+  <!-- ========== Overlays ========== -->
+  <div class="overlay" id="mainOverlay"></div>
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+  <div class="overlay" id="quizOverlay">
+    <div class="quiz-panel" id="quizPanel"></div>
+  </div>
+
+  <!-- ========== Bottom Navigation ========== -->
+  <nav class="nav-bar" id="bottomNav">
+    <div class="nav-bar__item nav-bar__item--active" data-tab="bookkeeping">
+      <span class="nav-bar__icon">📒</span>
+      <span class="nav-bar__label">记账</span>
+    </div>
+    <div class="nav-bar__item" data-tab="finance">
+      <span class="nav-bar__icon">💡</span>
+      <span class="nav-bar__label">理财</span>
+    </div>
+    <div class="nav-bar__item nav-bar__item--center" id="btnCenterAdd">
+      <div class="nav-bubble" id="navBubble">
+        <img class="nav-bubble__avatar" id="navBubbleAvatar" src="images/avatar-guyunsheng.png" alt="">
+        <span class="nav-bubble__text" id="navBubbleText">来和我AI记账吧~</span>
+        <span class="nav-bubble__close" id="navBubbleClose">✕</span>
+      </div>
+      <div class="nav-bar__center-btn">AI</div>
+    </div>
+    <div class="nav-bar__item" data-tab="statistics">
+      <span class="nav-bar__icon">📊</span>
+      <span class="nav-bar__label">统计</span>
+    </div>
+    <div class="nav-bar__item" data-tab="profile">
+      <span class="nav-bar__icon">👤</span>
+      <span class="nav-bar__label">我的</span>
+    </div>
+  </nav>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
