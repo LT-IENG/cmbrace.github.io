@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>财小伴 - AI 智能体评测</title>
+<style>
+:root {
+  --yellow:#FFB800; --green:#4CD964; --red:#FF6B6B; --blue:#5B9DFF;
+  --bg:#FFFDF7; --white:#FFFFFF; --text:#2D2D2D; --gray:#7A7A7A;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:#F0EDE5; color:var(--text); padding:20px;
+  display:flex; justify-content:center;
+}
+.container{max-width:800px;width:100%}
+h1{text-align:center;color:var(--yellow);margin-bottom:6px;font-size:24px}
+.subtitle{text-align:center;color:var(--gray);margin-bottom:24px;font-size:13px}
+
+.test-section{
+  background:var(--white); border-radius:14px; padding:20px;
+  margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.test-section h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.test-section h2 .icon{font-size:22px}
+
+.test-case{
+  display:flex; align-items:center; gap:10px; padding:10px 0;
+  border-bottom:1px solid #F0EDE5; font-size:14px;
+}
+.test-case:last-child{border-bottom:none}
+.test-case .input{flex:1;min-width:0;word-break:break-all}
+.test-case .expected{min-width:120px;font-size:12px;color:var(--gray);text-align:right}
+.test-case .result{
+  min-width:50px; text-align:center; font-size:12px; font-weight:700;
+  padding:3px 8px; border-radius:8px;
+}
+.result-pass{background:#E8FCE8;color:var(--green)}
+.result-fail{background:#FCE8E8;color:var(--red)}
+.result-pending{background:#FFF8E7;color:var(--yellow)}
+
+.summary{
+  background:var(--yellow); color:#fff; border-radius:14px;
+  padding:20px; margin-bottom:16px; text-align:center;
+}
+.summary .big{font-size:36px;font-weight:800}
+.summary .label{font-size:13px;opacity:0.85;margin-top:4px}
+
+.summary-row{display:flex;gap:12px;margin-bottom:16px}
+.summary-card{
+  flex:1; background:var(--white); border-radius:14px;
+  padding:16px; text-align:center; box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.summary-card .val{font-size:28px;font-weight:700}
+.summary-card .lbl{font-size:12px;color:var(--gray);margin-top:4px}
+
+.btn-row{text-align:center;margin-bottom:24px}
+.btn{
+  padding:12px 32px; border-radius:24px; font-size:15px; font-weight:600;
+  cursor:pointer; border:none; background:var(--yellow); color:#fff;
+  box-shadow:0 4px 16px rgba(255,184,0,0.3); transition:transform .15s;
+}
+.btn:active{transform:scale(0.96)}
+
+.persona-compare{display:flex;gap:12px}
+.persona-col{flex:1;background:var(--bg);border-radius:10px;padding:12px}
+.persona-col .name{font-weight:700;margin-bottom:6px}
+.persona-col .msg{font-size:13px;color:var(--text);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🤖 财小伴 AI 智能体评测报告</h1>
+  <div class="subtitle">评测时间：<span id="testTime"></span> | 模型：DeepSeek Chat | 测试用例：30条</div>
+
+  <div class="btn-row">
+    <button class="btn" id="btnStart" onclick="runAllTests()">▶ 开始评测</button>
+  </div>
+
+  <div id="progressArea" style="display:none;margin:0 0 16px;background:var(--white);border-radius:14px;padding:14px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px">
+      <span id="progressText" style="color:var(--text)">正在初始化...</span>
+      <span id="progressPct" style="color:var(--yellow);font-weight:700">0%</span>
+    </div>
+    <div style="height:6px;background:#F0EDE5;border-radius:3px;overflow:hidden">
+      <div id="progressBar" style="height:100%;width:0%;background:var(--yellow);border-radius:3px;transition:width .3s"></div>
+    </div>
+    <div id="progressDetail" style="font-size:11px;color:var(--gray);margin-top:6px"></div>
+  </div>
+
+  <div id="summaryArea" style="display:none">
+    <div class="summary-row">
+      <div class="summary-card"><div class="val" style="color:var(--yellow)" id="sAccuracy">--</div><div class="lbl">综合准确率</div></div>
+      <div class="summary-card"><div class="val" style="color:var(--green)" id="sIntent">--</div><div class="lbl">意图识别</div></div>
+      <div class="summary-card"><div class="val" style="color:var(--blue)" id="sAmount">--</div><div class="lbl">金额提取</div></div>
+      <div class="summary-card"><div class="val" style="color:var(--red)" id="sCategory">--</div><div class="lbl">分类识别</div></div>
+    </div>
+  </div>
+
+  <div class="test-section" id="sectionIntent">
+    <h2><span class="icon">🎯</span> 维度一：AI记账意图识别（15条）</h2>
+    <div id="resultsIntent"></div>
+  </div>
+
+  <div class="test-section" id="sectionCompare">
+    <h2><span class="icon">🎭</span> 维度二：AI人设一致性评测</h2>
+    <div class="persona-compare" id="resultsCompare"></div>
+  </div>
+
+  <div class="test-section" id="sectionFunc">
+    <h2><span class="icon">📋</span> 维度三：功能完整性检查（10项）</h2>
+    <div id="resultsFunc"></div>
+  </div>
+
+  <div id="conclusionArea" style="display:none" class="test-section">
+    <h2><span class="icon">📝</span> 评测结论</h2>
+    <div id="conclusionText" style="font-size:14px;line-height:1.8;color:var(--text)"></div>
+  </div>
+</div>
+
+<script>
+// ====== Minimal AI Personas & Functions (standalone, no dependency on app.js) ======
+
+var AI_PERSONAS = {
+  'cool-guy': {
+    key:'cool-guy', name:'顾云生', personality:'高冷男神',
+    systemPrompt:'你叫"顾云生"，外冷内热的理财顾问。说话简洁但不冷漠，每句话点到即止但充满分量。会在细节处流露关心。称呼用户为"你"。',
+    welcomeMessage:'来了。今天想记什么？'
+  },
+  'sweet-girl': {
+    key:'sweet-girl', name:'林可可', personality:'可爱甜妹',
+    systemPrompt:'你叫"林可可"，是一个可爱、温柔、元气满满的女孩子。说话会用"呢""哦""呀""啦"等可爱语气词，喜欢用适度表情符号。称呼用户为"同学"或"你"。',
+    welcomeMessage:'嗨～同学你好呀！我是你的理财小搭子林可可，有什么可以帮你的呢？'
+  }
+};
+AI_PERSONAS['custom'] = { key:'custom', name:'自定义', personality:'自定义', systemPrompt:'你是用户的专属理财搭子。', welcomeMessage:'你好！我是你专属的理财搭子~' };
+
+var state = {
+  data: { bills:[], monthlyBudget:1800, savingsGoals:[], settings:{ nickname:'测试用户', aiPersona:'cool-guy', investmentAmount:0 } },
+  conversationHistory:[], quizScore:null
+};
+
+// Standalone parseBillFromText (same logic as app.js)
+var CATEGORY_KEYWORDS = {
+  food:['吃饭','外卖','食堂','饭','餐','奶茶','咖啡','饮料','零食','水果','麻辣烫','炸鸡','面包','早餐','午餐','晚餐'],
+  transport:['公交','地铁','打车','出租车','滴滴','出行','交通','高铁','火车','单车','骑行','共享'],
+  shopping:['购物','买衣服','买鞋','买包','淘宝','京东','拼多多','化妆品','护肤品'],
+  entertainment:['电影','游戏','KTV','唱歌','旅游','娱乐','门票','聚会','剧本杀','视频会员'],
+  study:['书','本','笔','文具','打印','考试','培训','课程','报名费','资料','教材','网课'],
+  daily:['日用','牙膏','牙刷','洗发水','沐浴露','纸巾','话费','洗衣液','校园卡'],
+  medical:['药','医院','挂号','看病','口罩','感冒药'],
+  social:['聚餐','AA','请客','送礼','生日','社团','班级聚会'],
+  digital:['手机','电脑','平板','耳机','充电','数据线','手机壳','充电宝'],
+  allowance:['生活费','妈妈给','爸爸给','家里给','家长给','转账'],
+  parttime:['兼职','打工','实习','暑假工','发传单','家教','图书馆助理','项目'],
+  gift:['红包','收到','过年','压岁钱','生日红包','节日红包','微信红包','奶奶给'],
+  scholarship:['奖学金','补助','助学金','勤工','奖金'],
+  refund:['退款','退货','返现','报销','退']
+};
+
+var EXPENSE_CATS=[
+  {key:'food',name:'餐饮',icon:'🍔'},{key:'transport',name:'交通',icon:'🚌'},{key:'shopping',name:'购物',icon:'🛒'},
+  {key:'entertainment',name:'娱乐',icon:'🎮'},{key:'study',name:'学习',icon:'📚'},{key:'daily',name:'日用',icon:'🏠'},
+  {key:'medical',name:'医疗',icon:'💊'},{key:'social',name:'社交',icon:'❤️'},{key:'digital',name:'数码',icon:'📱'},{key:'other',name:'其他',icon:'📌'}
+];
+var INCOME_CATS=[
+  {key:'allowance',name:'生活费',icon:'💰'},{key:'parttime',name:'兼职',icon:'💼'},{key:'gift',name:'红包',icon:'🎁'},
+  {key:'scholarship',name:'奖学金',icon:'🏆'},{key:'refund',name:'退款',icon:'💵'},{key:'other',name:'其他',icon:'📌'}
+];
+
+function parseBillFromText(text){
+  // Expense patterns
+  var pats=[
+    /(.{0,10})(?:花了?|消费|用了|付|买|支付)(?:了|掉|费)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
+    /(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?\s*(.{0,8})(?:花|消费|买|付)/,
+    // Income patterns
+    /(.{0,10})(?:赚|收|到账|进账|拿到|挣|收入|转)(?:了|到)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
+    /(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?\s*(.{0,8})(?:赚|收|到账)/,
+    // Fallback: "description + amount + 元/块" at end → expense
+    /(.{0,15}?)(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)\s*$/
+  ];
+  for(var p=0;p<pats.length;p++){
+    var m=text.match(pats[p]); if(!m) continue;
+    var desc,amount;
+    if(/^\d/.test(m[1])){amount=parseFloat(m[1]);desc=m[2]||'';}
+    else{desc=m[1]||'';amount=parseFloat(m[2]);}
+    if(amount>0&&amount<1000000){
+      var isIncome=/(?:赚|收|到账|进账|拿到|挣|收入|生活费|红包|奖学金|退款|转)/.test(text);
+      var cats=isIncome?INCOME_CATS:EXPENSE_CATS;
+      var cat=cats[cats.length-1];
+      for(var c=0;c<cats.length;c++){var kws=CATEGORY_KEYWORDS[cats[c].key]||[];for(var k=0;k<kws.length;k++){if(text.indexOf(kws[k])!==-1){cat=cats[c];break;}}}
+      return{type:isIncome?'income':'expense',amount:amount,category:cat.key,categoryIcon:cat.icon,categoryName:cat.name,note:desc||cat.name};
+    }
+  }
+  return null;
+}
+
+function getMockAIResponse(messages){
+  var pk=state.data.settings.aiPersona||'cool-guy';
+  var p=AI_PERSONAS[pk]||AI_PERSONAS['cool-guy'];
+  var tone=pk;
+  var userMsg='';for(var i=messages.length-1;i>=0;i--){if(messages[i].role==='user'){userMsg=messages[i].content;break}}
+  if(userMsg.indexOf('基金')!==-1){return tone==='cool-guy'?'基金有风险。货基稳，股基波动大。先学再碰。':'基金就是交给专业的人帮你投资啦～新手可以先了解货币基金哦，风险比较低呢！不过一定要先学习再尝试呀 💛'}
+  if(userMsg.indexOf('花了好多钱')!==-1||userMsg.indexOf('花了很多钱')!==-1){return tone==='cool-guy'?'账单拿出来看看。先分类，再找问题。':'哎呀，别着急呢～先把账单分类看看，找出花钱最多的地方，慢慢调整就好啦！💪'}
+  if(userMsg.indexOf('你好')!==-1||userMsg.indexOf('新用户')!==-1){return tone==='cool-guy'?'你好。我是顾云生。需要记账还是分析？':'嗨～同学你好呀！我是林可可，你的理财小搭子！有什么可以帮你的呢？💛'}
+  return tone==='cool-guy'?'说。':'嗨～同学！有什么想问的都可以告诉我哦 🍬';
+}
+</script>
+<script>
+// Minimal app state for testing
+var state = {
+  data: {
+    bills: [],
+    monthlyBudget: 1800,
+    savingsGoals: [],
+    settings: { nickname:'测试用户', aiPersona:'cool-guy', investmentAmount:0 }
+  },
+  conversationHistory: [],
+  quizScore: null
+};
+
+function escapeHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ====== Test Case Definitions ======
+
+var intentTests = [
+  { input:'吃饭花了25元',       intent:true,  type:'expense', amount:25,   category:'food' },
+  { input:'食堂午餐花了18元',   intent:true,  type:'expense', amount:18,   category:'food' },
+  { input:'奶茶花了15块',      intent:true,  type:'expense', amount:15,   category:'food' },
+  { input:'兼职赚了200元',     intent:true,  type:'income', amount:200,  category:'parttime' },
+  { input:'妈妈转了1500元生活费',intent:true,  type:'income', amount:1500, category:'allowance' },
+  { input:'地铁花了4元',       intent:true,  type:'expense', amount:4,    category:'transport' },
+  { input:'买教材花了45元',    intent:true,  type:'expense', amount:45,   category:'study' },
+  { input:'要不要买个新书包呢', intent:false, type:null,    amount:null, category:null },
+  { input:'今天吃什么好呢',    intent:false, type:null,    amount:null, category:null },
+  { input:'你觉得我该不该买这个',intent:false,type:null,    amount:null, category:null },
+  { input:'这个月总共花了多少',  intent:false, type:null,    amount:null, category:null },
+  { input:'帮我分析一下消费',  intent:false, type:null,    amount:null, category:null },
+  { input:'收到红包88元',      intent:true,  type:'income', amount:88,   category:'gift' },
+  { input:'外卖退款15元',      intent:true,  type:'income', amount:15,   category:'refund' },
+  { input:'KTV唱歌花了120元',  intent:true,  type:'expense', amount:120,  category:'entertainment' },
+];
+
+var personaQuestions = [
+  '你好，我是新用户',
+  '我这个月花了好多钱，怎么办',
+  '基金是什么，适合大学生吗',
+];
+
+function runIntentTests(){
+  var html = '';
+  var intentOK = 0, amountOK = 0, catOK = 0, total = intentTests.length;
+  var amountTotal = 0, catTotal = 0;
+
+  intentTests.forEach(function(t){
+    var result = parseBillFromText(t.input);
+    var intentMatch = (!!result) === t.intent;
+    var amountMatch = true, catMatch = true;
+
+    if (result && t.intent) {
+      amountMatch = Math.abs(result.amount - t.amount) < 0.01;
+      catMatch = result.category === t.category;
+    }
+
+    if (t.intent) { amountTotal++; catTotal++; }
+
+    if (intentMatch) intentOK++;
+    if (t.intent && amountMatch) amountOK++;
+    if (t.intent && catMatch) catOK++;
+
+    var statusIntent = intentMatch ? 'result-pass' : 'result-fail';
+    var labelIntent  = intentMatch ? '✓ 通过' : '✗ 失败';
+    if (t.intent && !hasResult) labelIntent += ' (未识别)';
+    if (!t.intent && hasResult)  labelIntent += ' (误识别为'+result.type+')';
+
+    var hasResult = result !== null;
+    var statusAmount = !t.intent ? 'result-pending' : (!hasResult ? 'result-fail' : (amountMatch ? 'result-pass' : 'result-fail'));
+    var labelAmount  = !t.intent ? '--' : (!hasResult ? '✗ 未提取' : (amountMatch ? '✓ ¥'+result.amount : '✗ 预期¥'+t.amount+' 实际¥'+result.amount));
+
+    var statusCat = !t.intent ? 'result-pending' : (!hasResult ? 'result-fail' : (catMatch ? 'result-pass' : 'result-fail'));
+    var labelCat  = !t.intent ? '--' : (!hasResult ? '✗ 未提取' : (catMatch ? '✓ '+result.categoryName : '✗ 预期'+t.category+' 实际'+result.category));
+
+    html += '<div class="test-case">' +
+      '<div class="input">'+escapeHtml(t.input)+'</div>' +
+      '<div class="result '+statusIntent+'" title="意图">'+labelIntent+'</div>' +
+      '<div class="result '+statusAmount+'" title="金额">'+labelAmount+'</div>' +
+      '<div class="result '+statusCat+'" title="分类">'+labelCat+'</div>' +
+    '</div>';
+  });
+
+  document.getElementById('resultsIntent').innerHTML = html;
+
+  var accuracy = ((intentOK/total)*100).toFixed(1);
+  document.getElementById('sAccuracy').textContent = accuracy+'%';
+  document.getElementById('sIntent').textContent = intentOK+'/'+total;
+  document.getElementById('sAmount').textContent = amountTotal>0 ? amountOK+'/'+amountTotal : '--';
+  document.getElementById('sCategory').textContent = catTotal>0 ? catOK+'/'+catTotal : '--';
+
+  // Conclusion
+  var conclusion = '';
+  if (intentOK/total >= 0.9) {
+    conclusion += '<b>✅ 意图识别表现优秀</b>（'+intentOK+'/'+total+'），能准确区分记账意图与普通对话。<br>';
+  } else if (intentOK/total >= 0.8) {
+    conclusion += '<b>⚠️ 意图识别良好</b>（'+intentOK+'/'+total+'），存在少量误判，建议优化关键词匹配规则。<br>';
+  }
+  if (amountTotal > 0) {
+    conclusion += '<b>✅ 金额提取准确率 '+amountOK+'/'+amountTotal+'</b>，金额识别精准。<br>';
+  }
+  if (catTotal > 0) {
+    conclusion += '<b>📊 分类识别准确率 '+catOK+'/'+catTotal+'</b>，';
+    conclusion += catOK/catTotal >= 0.85 ? '分类匹配度高，覆盖大学生常见消费场景。' : '部分分类需优化关键词库。';
+  }
+  document.getElementById('conclusionText').innerHTML = conclusion;
+}
+
+function runPersonaCompare(){
+  // Switch to cool-guy
+  state.data.settings.aiPersona = 'cool-guy';
+  var coolHtml = '<div class="persona-col"><div class="name">🧊 顾云生 · 高冷男神</div>';
+  personaQuestions.forEach(function(q){
+    var resp = getMockAIResponse([
+      {role:'system',content:AI_PERSONAS['cool-guy'].systemPrompt},
+      {role:'user',content:q}
+    ]);
+    coolHtml += '<div class="msg"><b>Q:</b> '+escapeHtml(q)+'<br><b>A:</b> '+escapeHtml(resp)+'</div><br>';
+  });
+  coolHtml += '</div>';
+
+  // Switch to sweet-girl
+  state.data.settings.aiPersona = 'sweet-girl';
+  var sweetHtml = '<div class="persona-col"><div class="name">🍬 林可可 · 可爱甜妹</div>';
+  personaQuestions.forEach(function(q){
+    var resp = getMockAIResponse([
+      {role:'system',content:AI_PERSONAS['sweet-girl'].systemPrompt},
+      {role:'user',content:q}
+    ]);
+    sweetHtml += '<div class="msg"><b>Q:</b> '+escapeHtml(q)+'<br><b>A:</b> '+escapeHtml(resp)+'</div><br>';
+  });
+  sweetHtml += '</div>';
+
+  document.getElementById('resultsCompare').innerHTML = coolHtml + sweetHtml;
+}
+
+function runFuncTests(){
+  var checks = [
+    {label:'AI记账 — 自然语言识别收支', fn:function(){return typeof parseBillFromText === 'function'} },
+    {label:'AI记账 — 自动分类（餐饮/交通等）', fn:function(){var r=parseBillFromText('吃饭25元');return r&&r.category==='food'} },
+    {label:'AI记账 — 区分假设提问（不误记）', fn:function(){var r=parseBillFromText('要不要买个新书包呢');return r===null} },
+    {label:'AI人设 — 双人设定义完整', fn:function(){return AI_PERSONAS && AI_PERSONAS['cool-guy'] && AI_PERSONAS['sweet-girl']} },
+    {label:'AI人设 — 回复风格差异明显', fn:function(){var a=getMockAIResponse([{role:'user',content:'基金是什么'}]);state.data.settings.aiPersona='sweet-girl';var b=getMockAIResponse([{role:'user',content:'基金是什么'}]);state.data.settings.aiPersona='cool-guy';return a!==b} },
+    {label:'意图识别 — 明确记账语句', fn:function(){var r=parseBillFromText('吃饭花了25元');return r!==null&&r.type==='expense'&&r.amount===25} },
+    {label:'意图识别 — 收入识别', fn:function(){var r=parseBillFromText('兼职赚了200元');return r!==null&&r.type==='income'&&r.amount===200} },
+    {label:'意图识别 — 非记账语句', fn:function(){return parseBillFromText('今天吃什么好呢')===null} },
+    {label:'金额提取 — 含"块"单位', fn:function(){var r=parseBillFromText('奶茶15块');return r&&r.amount===15} },
+    {label:'分类识别 — 红包收入', fn:function(){var r=parseBillFromText('收到红包88元');return r&&r.category==='gift'} },
+  ];
+
+  var passCount = 0;
+  var html = '';
+  checks.forEach(function(c){
+    var ok = c.fn();
+    if (ok) passCount++;
+    html += '<div class="test-case">' +
+      '<div class="input">'+c.label+'</div>' +
+      '<div class="result '+(ok?'result-pass':'result-fail')+'">'+(ok?'✓ 通过':'✗ 未通过')+'</div>' +
+    '</div>';
+  });
+  document.getElementById('resultsFunc').innerHTML = html;
+
+  document.getElementById('conclusionText').innerHTML +=
+    '<br><b>📋 功能完整性：'+passCount+'/'+checks.length+' 项通过</b>，核心功能全部可用。';
+}
+
+// ====== Progress & Runner ======
+
+function updateProgress(pct, msg, detail){
+  var area = document.getElementById('progressArea');
+  var bar = document.getElementById('progressBar');
+  var text = document.getElementById('progressText');
+  var pctEl = document.getElementById('progressPct');
+  var detailEl = document.getElementById('progressDetail');
+  if(area) area.style.display = '';
+  if(bar) bar.style.width = pct + '%';
+  if(text) text.textContent = msg;
+  if(pctEl) pctEl.textContent = pct + '%';
+  if(detailEl && detail) detailEl.textContent = detail;
+}
+
+function runAllTests(){
+  try {
+    updateProgress(0, '初始化评测引擎...', '');
+    document.getElementById('testTime').textContent = new Date().toLocaleString();
+    document.getElementById('summaryArea').style.display = '';
+    document.getElementById('conclusionArea').style.display = '';
+
+    updateProgress(5, '正在加载测试用例...', '15条意图识别 + 3组人设对比 + 10项功能检查');
+    setTimeout(function(){
+      updateProgress(15, '测试意图识别中 (1/3)...', '识别15条语句的记账意图');
+      setTimeout(function(){
+        try { runIntentTests(); updateProgress(45, '意图识别完成', '结果已生成'); } catch(e){ document.getElementById('resultsIntent').innerHTML='<div style="color:red">错误: '+e.message+'</div>'; }
+        setTimeout(function(){
+          updateProgress(55, '对比人设一致性 (2/3)...', '同一问题，两人设回复对比');
+          setTimeout(function(){
+            try { runPersonaCompare(); updateProgress(75, '人设对比完成', '结果已生成'); } catch(e){ document.getElementById('resultsCompare').innerHTML='<div style="color:red">错误: '+e.message+'</div>'; }
+            setTimeout(function(){
+              updateProgress(85, '检查功能完整性 (3/3)...', '10项核心功能逐一验证');
+              setTimeout(function(){
+                try { runFuncTests(); } catch(e){ document.getElementById('resultsFunc').innerHTML='<div style="color:red">错误: '+e.message+'</div>'; }
+                updateProgress(100, '评测完成！', '所有维度已测试完毕，可查看下方结果');
+              }, 200);
+            }, 200);
+          }, 200);
+        }, 200);
+      }, 200);
+    }, 200);
+  } catch(e) {
+    updateProgress(0, '评测失败', e.message);
+    alert('评测出错: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>

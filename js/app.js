@@ -417,45 +417,46 @@ function getBillsForMonth() {
  * @returns {Object|null} - { type, amount, category, categoryIcon, categoryName, note, date } or null
  */
 function parseBillFromText(text) {
-  // ---- Expense patterns ----
+  // Expense patterns
   var expensePatterns = [
-    /(.{0,10})(?:花|消费|用了|付|花了|买|支付|购买|花了)(?:了|掉|费)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
+    /(.{0,10})(?:花了?|消费|用了|付|买|支付)(?:了|掉|费)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
     /(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?\s*(.{0,8})(?:花|消费|买|付)/
   ];
-
-  // ---- Income patterns ----
+  // Income patterns
   var incomePatterns = [
-    /(.{0,10})(?:赚|收|到账|进账|拿到|挣|收入)(?:了|到)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
+    /(.{0,10})(?:赚|收|到账|进账|拿到|挣|收入|转)(?:了|到)?(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?/,
     /(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)?\s*(.{0,8})(?:赚|收|到账)/
   ];
+  // Fallback: "description + amount + 元/块" at sentence end → check income keywords
+  var fallbackPattern = /(.{0,15}?)(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱)\s*$/;
 
-  var allPatterns = expensePatterns.concat(incomePatterns);
+  var allPatterns = expensePatterns.concat(incomePatterns).concat([fallbackPattern]);
 
   for (var p = 0; p < allPatterns.length; p++) {
     var match = text.match(allPatterns[p]);
-    if (match) {
-      var desc, amount;
-      if (/^\d/.test(match[1])) {
-        amount = parseFloat(match[1]);
-        desc   = match[2] || '';
-      } else {
-        desc   = match[1] || '';
-        amount = parseFloat(match[2]);
-      }
+    if (!match) continue;
 
-      if (amount > 0 && amount < 1000000) {
-        var isIncome = /(?:赚|收|到账|进账|拿到|挣|收入|生活费|红包|奖学金|退款)/.test(text);
-        var cat      = classifyCategory(text, isIncome);
-        return {
-          type:         isIncome ? 'income' : 'expense',
-          amount:       amount,
-          category:     cat.key,
-          categoryIcon: cat.icon,
-          categoryName: cat.name,
-          note:         desc || cat.name,
-          date:         todayStr()
-        };
-      }
+    var desc, amount;
+    if (/^\d/.test(match[1])) {
+      amount = parseFloat(match[1]);
+      desc   = match[2] || '';
+    } else {
+      desc   = match[1] || '';
+      amount = parseFloat(match[2]);
+    }
+
+    if (amount > 0 && amount < 1000000) {
+      var isIncome = /(?:赚|收|到账|进账|拿到|挣|收入|生活费|红包|奖学金|退款|转)/.test(text);
+      var cat      = classifyCategory(text, isIncome);
+      return {
+        type:         isIncome ? 'income' : 'expense',
+        amount:       amount,
+        category:     cat.key,
+        categoryIcon: cat.icon,
+        categoryName: cat.name,
+        note:         desc || cat.name,
+        date:         todayStr()
+      };
     }
   }
 
